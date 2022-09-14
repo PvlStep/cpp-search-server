@@ -1,4 +1,5 @@
 #include <iostream>
+#include <istream>
 #include <set>
 #include <string>
 #include <utility>
@@ -12,6 +13,13 @@ using namespace std;
 
 // Глобальные константы
 int MAX_RESULT_DOCUMENT_COUNT = 5; // Количество отображаемых документов с макс.релевантностью
+
+enum class DocumentStatus {
+    ACTUAL,
+    IRRELEVANT,
+    BANNED,
+    REMOVED
+};
 
 // Функция "SplitIntoWords" разделяет строку на отдельные слова по пробелу
 vector<string> SplitIntoWords(const string& text) {
@@ -40,6 +48,7 @@ struct Document {
     int id;
     double relevance;
     int rating;
+    DocumentStatus status;
 };
 
 
@@ -68,9 +77,11 @@ public:
 
 
     //Метод "AddDocument" добавляет в словарь слов: само слово и словарь, включающий id документов, где встречается это слово и его релевантность (tf).
-    void AddDocument(int document_id, const string& document, const vector<int> ratings) {
+    void AddDocument(int document_id, const string& document, DocumentStatus status, const vector<int> ratings) {
         const vector<string> words = SplitIntoWordsNoStop(document);
-        document_rating[document_id] = ComputeAverageRating(ratings);
+        
+        document_data[document_id] = { ComputeAverageRating(ratings), status };
+        //document_rating[document_id] = ComputeAverageRating(ratings);
         ++document_count_;
         const double count_word = 1.0 / words.size();
         for (const string& word : words) {
@@ -87,22 +98,35 @@ public:
     }
 
     // Возвращает топ-5 самых релевантных документов в виде пар: {id, релевантность}
-    vector<Document> FindTopDocuments(const string& raw_query) const {
+    vector<Document> FindTopDocuments(const string& raw_query, DocumentStatus status) const {
         const Query query_words = ParseQuery(raw_query);
         auto matched_documents = FindAllDocuments(query_words);
+        vector<Document> actual_documents;
 
         sort(matched_documents.begin(), matched_documents.end(), [](const Document& lhs, const Document& rhs) {
             return lhs.relevance > rhs.relevance;
             });
-        if (matched_documents.size() > MAX_RESULT_DOCUMENT_COUNT) {
-            matched_documents.resize(MAX_RESULT_DOCUMENT_COUNT);
+
+        for (Document doc : matched_documents) {
+            if (doc.status == status) {
+                actual_documents.push_back(doc);
+            }
         }
-        return matched_documents;
+
+        if (actual_documents.size() > MAX_RESULT_DOCUMENT_COUNT) {
+            actual_documents.resize(MAX_RESULT_DOCUMENT_COUNT);
+        }
+        return actual_documents;
     }
 
 
     //Метка "private" используется для обозначения функций и полей, не доступных к редактированию извне
 private:
+
+    struct InternalData {
+        int rating;  
+        DocumentStatus status;
+    };
 
     //Стуктура для хранения "плюс"-слов и минус-слов
     struct Query {
@@ -113,7 +137,8 @@ private:
     //Ключи контейнера word_to_documents — слова из добавленных документов, а значения — id документов, в которых это слово встречается, 
  //Множество "stop_words" хранит стоп-слова
     map<string, map<int, double>> word_to_documents_tf;
-    map<int, int> document_rating;
+    InternalData int_data;
+    map<int, InternalData> document_data;
     set<string> stop_words;
     int document_count_ = 0;
 
@@ -148,7 +173,7 @@ private:
     }
 
       //Функция расчитывающая средний рейтинг
-    int ComputeAverageRating(const vector<int>& ratings) const {
+    static int ComputeAverageRating(const vector<int>& ratings) {
         if (ratings.size() == 0) {
             return 0;
         }
@@ -157,7 +182,7 @@ private:
             average += r;
         }
         return average / static_cast<int>(ratings.size());
-    }
+    };
 
     // Для каждого документа возвращает его id и релевантность 
     vector<Document> FindAllDocuments(const Query& query_words) const {
@@ -180,7 +205,7 @@ private:
         }
         vector<Document> matched_documents;
         for (const auto& dock : documents_to_relevance) {
-            matched_documents.push_back({ dock.first, dock.second, document_rating.at(dock.first)});
+            matched_documents.push_back({ dock.first, dock.second, document_data.at(dock.first).rating, document_data.at(dock.first).status});
         }
         return matched_documents;
     }
@@ -194,6 +219,10 @@ SearchServer CreateSearchServer() {
     const int document_count = ReadLineWithNumber();
     for (int document_id = 0; document_id < document_count; ++document_id) {
         const string document = ReadLine();
+
+        int status;
+        cin >> status;
+
         int ratings_size;
         cin >> ratings_size;
 
@@ -205,7 +234,7 @@ SearchServer CreateSearchServer() {
             cin >> rating;
         }
 
-        search_server.AddDocument(document_id, document, ratings);
+        search_server.AddDocument(document_id, document, static_cast<DocumentStatus>(status), ratings);
         ReadLine();
     }
     return search_server;
@@ -216,7 +245,8 @@ SearchServer CreateSearchServer() {
 int main() {
     const SearchServer server = CreateSearchServer();
     const string query = ReadLine();
-    for (Document& document : server.FindTopDocuments(query)) {
+    const DocumentStatus status = static_cast<DocumentStatus>(ReadLineWithNumber());
+    for (Document& document : server.FindTopDocuments(query, status)) {
         cout << "{ document_id = "s << document.id << ", relevance = "s << document.relevance << ", rating = "s << document.rating << " }"s << endl;
     }
     return 0;
