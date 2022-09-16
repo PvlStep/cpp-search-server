@@ -7,6 +7,7 @@
 #include <map>
 #include <algorithm>
 #include <cmath>
+#include <tuple>
 
 
 using namespace std;
@@ -90,6 +91,10 @@ public:
 
     }
 
+    int GetDocumentCount() {
+        return static_cast<int>(document_data.size());
+    }
+
     //ћетод "SetStopWords" получает список стоп-слов
     void SetStopWords(const string& text) {
         for (const string& word : SplitIntoWords(text)) {
@@ -98,7 +103,7 @@ public:
     }
 
     // ¬озвращает топ-5 самых релевантных документов в виде пар: {id, релевантность}
-    vector<Document> FindTopDocuments(const string& raw_query, DocumentStatus status) const {
+    vector<Document> FindTopDocuments(const string& raw_query, DocumentStatus status = DocumentStatus::ACTUAL) const {
         const Query query_words = ParseQuery(raw_query);
         auto matched_documents = FindAllDocuments(query_words);
         vector<Document> actual_documents;
@@ -107,7 +112,7 @@ public:
             return lhs.relevance > rhs.relevance;
             });
 
-        for (Document doc : matched_documents) {
+        for (const Document& doc : matched_documents) {
             if (doc.status == status) {
                 actual_documents.push_back(doc);
             }
@@ -119,9 +124,34 @@ public:
         return actual_documents;
     }
 
+    tuple<vector<string>, DocumentStatus> MatchDocument(const string& raw_query, int document_id) const {
+        const Query query = ParseQuery(raw_query);
+        vector<string> words;
+        for (string w : query.plus) {
+            if (word_to_documents_tf.count(w) == 0) {
+                continue;
+                if (word_to_documents_tf.at(w).count(document_id))
+                words.push_back(w);
+            } 
+        }
+        for (string w : query.minus) {
+            if (word_to_documents_tf.count(w) == 0) {
+                continue;
+                if (word_to_documents_tf.at(w).count(document_id))
+                    words.clear();
+                break;
+            }
+        }
+        return {words, document_data.at(document_id).status };
+    }
+
 
     //ћетка "private" используетс€ дл€ обозначени€ функций и полей, не доступных к редактированию извне
 private:
+    struct DocumentMatchResult {
+        vector<string> words;
+        DocumentStatus status;
+    };
 
     struct InternalData {
         int rating;  
@@ -137,7 +167,6 @@ private:
     // лючи контейнера word_to_documents Ч слова из добавленных документов, а значени€ Ч id документов, в которых это слово встречаетс€, 
  //ћножество "stop_words" хранит стоп-слова
     map<string, map<int, double>> word_to_documents_tf;
-    InternalData int_data;
     map<int, InternalData> document_data;
     set<string> stop_words;
     int document_count_ = 0;
@@ -242,12 +271,26 @@ SearchServer CreateSearchServer() {
 
 
 
-int main() {
-    const SearchServer server = CreateSearchServer();
-    const string query = ReadLine();
-    const DocumentStatus status = static_cast<DocumentStatus>(ReadLineWithNumber());
-    for (Document& document : server.FindTopDocuments(query, status)) {
-        cout << "{ document_id = "s << document.id << ", relevance = "s << document.relevance << ", rating = "s << document.rating << " }"s << endl;
+void PrintMatchDocumentResult(int document_id, const vector<string>& words, DocumentStatus status) {
+    cout << "{ "s
+        << "document_id = "s << document_id << ", "s
+        << "status = "s << static_cast<int>(status) << ", "s
+        << "words ="s;
+    for (const string& word : words) {
+        cout << ' ' << word;
     }
-    return 0;
+    cout << "}"s << endl;
+}
+int main() {
+    SearchServer search_server;
+    search_server.SetStopWords("и в на"s);
+    search_server.AddDocument(0, "белый кот и модный ошейник"s, DocumentStatus::ACTUAL, { 8, -3 });
+    search_server.AddDocument(1, "пушистый кот пушистый хвост"s, DocumentStatus::ACTUAL, { 7, 2, 7 });
+    search_server.AddDocument(2, "ухоженный пЄс выразительные глаза"s, DocumentStatus::ACTUAL, { 5, -12, 2, 1 });
+    search_server.AddDocument(3, "ухоженный скворец евгений"s, DocumentStatus::BANNED, { 9 });
+    const int document_count = search_server.GetDocumentCount();
+    for (int document_id = 0; document_id < document_count; ++document_id) {
+        const auto [words, status] = search_server.MatchDocument("пушистый кот"s, document_id);
+        PrintMatchDocumentResult(document_id, words, status);
+    }
 }
