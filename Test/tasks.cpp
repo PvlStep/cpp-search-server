@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <cmath>
 #include <tuple>
+#include <locale.h>
 
 
 using namespace std;
@@ -128,16 +129,12 @@ public:
         const Query query = ParseQuery(raw_query);
         vector<string> words;
         for (string w : query.plus) {
-            if (word_to_documents_tf.count(w) == 0) {
-                continue;
-                if (word_to_documents_tf.at(w).count(document_id))
+            if (word_to_documents_tf.at(w).count(document_id)) {
                 words.push_back(w);
             } 
         }
         for (string w : query.minus) {
-            if (word_to_documents_tf.count(w) == 0) {
-                continue;
-                if (word_to_documents_tf.at(w).count(document_id))
+           if (word_to_documents_tf.at(w).count(document_id)) {
                     words.clear();
                 break;
             }
@@ -282,15 +279,20 @@ void PrintMatchDocumentResult(int document_id, const vector<string>& words, Docu
     cout << "}"s << endl;
 }
 int main() {
+    setlocale(LC_ALL, "Russian");
     SearchServer search_server;
     search_server.SetStopWords("и в на"s);
     search_server.AddDocument(0, "белый кот и модный ошейник"s, DocumentStatus::ACTUAL, { 8, -3 });
     search_server.AddDocument(1, "пушистый кот пушистый хвост"s, DocumentStatus::ACTUAL, { 7, 2, 7 });
     search_server.AddDocument(2, "ухоженный пёс выразительные глаза"s, DocumentStatus::ACTUAL, { 5, -12, 2, 1 });
-    search_server.AddDocument(3, "ухоженный скворец евгений"s, DocumentStatus::BANNED, { 9 });
+    search_server.AddDocument(3, "ухоженный кот аляповатый"s, DocumentStatus::ACTUAL, { 5, -12, 2, 1 });
+    search_server.AddDocument(4, "ухоженный кот выразительные глаза"s, DocumentStatus::ACTUAL, { 5, -12, 2, 1 });
+    search_server.AddDocument(5, "ухоженный скворец евгений"s, DocumentStatus::BANNED, { 9 });
     const int document_count = search_server.GetDocumentCount();
     for (int document_id = 0; document_id < document_count; ++document_id) {
-        const auto [words, status] = search_server.MatchDocument("пушистый кот"s, document_id);
-        PrintMatchDocumentResult(document_id, words, status);
+        const tuple<vector<string>, DocumentStatus> test = search_server.MatchDocument("пушистый -аляповатый кот"s, document_id);
+        PrintMatchDocumentResult(document_id, get<0>(test), get<1>(test));
+     
     }
+    return 0;
 }
