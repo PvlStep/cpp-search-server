@@ -15,6 +15,7 @@ using namespace std;
 using namespace std;
 
 const int MAX_RESULT_DOCUMENT_COUNT = 5;
+const double INACCURACY = 1e-6;
 
 string ReadLine() {
     string s;
@@ -91,7 +92,7 @@ public:
         sort(matched_documents.begin(), matched_documents.end(),
             [](const Document& lhs, const Document& rhs) {
                 return lhs.relevance > rhs.relevance
-                    || (abs(lhs.relevance - rhs.relevance) < 1e-6 && lhs.rating > rhs.rating);
+                    || (abs(lhs.relevance - rhs.relevance) < INACCURACY && lhs.rating > rhs.rating);
             });
         if (matched_documents.size() > MAX_RESULT_DOCUMENT_COUNT) {
             matched_documents.resize(MAX_RESULT_DOCUMENT_COUNT);
@@ -467,8 +468,6 @@ void TestRelevance() {
     const string content3 = "поисковый запрос для релевантности поискового сервера для яндекс практикума"s;
     const vector<int> ratings3 = { 5, 3, 5 };
 
-    const vector<int> revelance = { 46, 45, 44 };
-
     {
         SearchServer server;
         server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
@@ -477,37 +476,49 @@ void TestRelevance() {
         const auto found_docs = server.FindTopDocuments("запрос сервера яндекс"s);
         ASSERT_EQUAL(found_docs.size(), 3);
         const Document& doc0 = found_docs[0];
-        ASSERT_EQUAL(doc0.id, revelance[0]);
+        const Document& doc1 = found_docs[1];
+        ASSERT_EQUAL(doc0.id, doc_id3);
         const Document& doc2 = found_docs[2];
-        ASSERT_EQUAL(doc2.id, revelance[2]);
-
-
+        ASSERT(doc0.relevance > doc1.relevance > doc2.relevance);
     }
-
 }
 
 //Вычисление рейтинга документов. Рейтинг добавленного документа равен среднему арифметическому оценок документа.
 
 void TestRating() {
-    const int doc_id = 42;
-    const string content = "cat in the city"s;
-    const vector<int> ratings = { 5, 4, 5, 3 };
-    const double average_r = 4.25;
+    const string content1 = "cat in the city"s;
+    const string content2 = "dog in the village"s;
+    const string content3 = "capybara in the bar"s;
+    const vector<int> ratings_positive = { 5, 4, 5, 3 };
+    const vector<int> ratings_negative = { -5, -5, -5, -5, -4};
+    const vector<int> ratings_mix = { -5, 4, 5, 5 };
+    const int average_rating1 = 4;
+    const int average_rating2 = -4;
+    const int average_rating3 = 2;
     // Сначала убеждаемся, что поиск слова, не входящего в список стоп-слов,
     // находит нужный документ
     {
         SearchServer server;
-        server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
-        const auto found_docs = server.FindTopDocuments("cat"s);
-        const Document& doc0 = found_docs[0];
-        ASSERT((doc0.rating - average_r) < 1e-6);
+        server.AddDocument(42, content1, DocumentStatus::ACTUAL, ratings_positive);
+        server.AddDocument(43, content2, DocumentStatus::ACTUAL, ratings_negative);
+        server.AddDocument(44, content3, DocumentStatus::ACTUAL, ratings_mix);
+        const auto found_docs1 = server.FindTopDocuments("cat"s);
+        const Document& doc1 = found_docs1[0];
+        ASSERT(abs(doc1.rating - average_rating1) < INACCURACY);
+
+        const auto found_docs2 = server.FindTopDocuments("dog"s);
+        const Document& doc2 = found_docs2[0];
+        ASSERT(abs(doc2.rating - average_rating2) < INACCURACY);
+
+        const auto found_docs3 = server.FindTopDocuments("bar"s);
+        const Document& doc3 = found_docs3[0];
+        ASSERT(abs(doc3.rating - average_rating3) < INACCURACY);
     }
 }
 
 //Фильтрация результатов поиска с использованием предиката, задаваемого пользователем.
 
 void TestPredicate() {
-
     {
         SearchServer server;
         server.AddDocument(50, "поисковый запрос тест статус"s, DocumentStatus::ACTUAL, { 1, 1, 2 });
@@ -523,7 +534,6 @@ void TestPredicate() {
         ASSERT_EQUAL(found_docs2[0].id, 54);
         ASSERT_EQUAL(found_docs2[1].id, 52);
     }
-
 }
 
 //Поиск документов, имеющих заданный статус.
@@ -548,14 +558,21 @@ void TestSearchStatus() {
         server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
         server.AddDocument(doc_id2, content2, DocumentStatus::BANNED, ratings2);
         server.AddDocument(doc_id3, content3, DocumentStatus::BANNED, ratings3);
+        server.AddDocument(47, "Дополнительный документ", DocumentStatus::IRRELEVANT, ratings2);
+        server.AddDocument(48, "Удаленный документ", DocumentStatus::REMOVED, ratings);
         const auto found_docs = server.FindTopDocuments("запрос сервера яндекс"s, DocumentStatus::ACTUAL);
         ASSERT_EQUAL(found_docs.size(), 1);
         ASSERT_EQUAL(found_docs[0].id, 44);
         const auto found_docs2 = server.FindTopDocuments("запрос сервера яндекс"s, DocumentStatus::BANNED);
         ASSERT_EQUAL(found_docs2.size(), 2);
         ASSERT_EQUAL(found_docs2[0].id, 46);
+        const auto found_docs3 = server.FindTopDocuments("документ"s, DocumentStatus::IRRELEVANT);
+        ASSERT_EQUAL(found_docs3.size(), 1);
+        ASSERT_EQUAL(found_docs3[0].id, 47);
+        const auto found_docs4 = server.FindTopDocuments("документ"s, DocumentStatus::REMOVED);
+        ASSERT_EQUAL(found_docs4.size(), 1);
+        ASSERT_EQUAL(found_docs4[0].id, 48);
     }
-
 }
 
 
@@ -575,8 +592,8 @@ void TestCompRevelance() {
         server.AddDocument(51, "сервер статус запрос текст"s, DocumentStatus::ACTUAL, { 5, 5, 5 });
         const auto found_docs = server.FindTopDocuments("сервер статус"s);
         ASSERT_EQUAL(found_docs.size(), 2);
-        ASSERT((abs(found_docs[0].relevance) - rev2) < 1e-6);
-        ASSERT((abs(found_docs[1].relevance) - rev) < 1e-5);
+        ASSERT((abs(found_docs[0].relevance) - rev2) < INACCURACY);
+        ASSERT((abs(found_docs[1].relevance) - rev) < INACCURACY);
     }
 
 }
