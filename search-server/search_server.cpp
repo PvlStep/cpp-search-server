@@ -1,5 +1,10 @@
 #include "search_server.h"
 
+SearchServer::SearchServer(const std::string& stop_words_text)
+    : SearchServer(
+        SplitIntoWords(stop_words_text))
+{
+}
 
     void SearchServer::AddDocument(int document_id, const std::string& document, DocumentStatus status,
         const std::vector<int>& ratings) {
@@ -16,7 +21,16 @@
         document_ids_.push_back(document_id);
     }
 
+    std::vector<Document> SearchServer::FindTopDocuments(const std::string& raw_query, DocumentStatus status) const {
+        return FindTopDocuments(
+            raw_query, [status](int document_id, DocumentStatus document_status, int rating) {
+                return document_status == status;
+            });
+    }
 
+    std::vector<Document> SearchServer::FindTopDocuments(const std::string& raw_query) const {
+        return FindTopDocuments(raw_query, DocumentStatus::ACTUAL);
+    }
 
     int SearchServer::GetDocumentCount() const {
 
@@ -139,4 +153,6 @@
     double SearchServer::ComputeWordInverseDocumentFreq(const std::string& word) const {
         return std::log(GetDocumentCount() * 1.0 / word_to_document_freqs_.at(word).size());
     }
+
+    
    

@@ -1,4 +1,9 @@
 #pragma once
+#include <iostream>
+#include <map>
+#include <set>
+#include <string>
+#include <vector>
 
 
 enum class DocumentStatus {
@@ -22,3 +27,5 @@ struct Document {
     int rating = 0;
 };
 
+
+std::ostream& operator<<(std::ostream& out, const Document& doc);

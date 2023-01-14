@@ -3,6 +3,7 @@
 #include <set>
 #include <map>
 #include <cmath>
+#include <iostream>
 
 template <typename Iterator>
 class IteratorRange {
@@ -68,3 +69,16 @@ public:
 private:
     std::vector<IteratorRange<Iterator>> pages;
 };
+
+template <typename Iterator>
+std::ostream& operator<<(std::ostream& out, const IteratorRange<Iterator> iterator_) {
+    for (auto it = iterator_.begin(); it != iterator_.end(); ++it) {
+        out << *it;
+    }
+    return out;
+}
+
+template <typename Container>
+auto Paginate(const Container& c, size_t page_size) {
+    return Paginator(std::begin(c), std::end(c), page_size);
+}

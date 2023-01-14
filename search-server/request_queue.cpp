@@ -3,7 +3,7 @@
     int RequestQueue::GetNoResultRequests() const {
         int empty_requests = 0;
         for (QueryResult result_ : requests_) {
-            if (result_.responce_.empty()) {
+            if (result_.responce_ == 0) {
                 ++empty_requests;
             }
         }

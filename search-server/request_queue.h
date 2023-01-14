@@ -18,21 +18,21 @@ public:
     std::vector<Document> AddFindRequest(const std::string& raw_query, DocumentPredicate document_predicate) {
 
         std::vector<Document> doc = server.FindTopDocuments(raw_query, document_predicate);
-        requests_.push_back({ doc, raw_query });
+        requests_.push_back({ doc.size(), raw_query });
         DequeRequests();
         return doc;     
     }
 
     std::vector<Document> AddFindRequest(const std::string& raw_query, DocumentStatus status) {
         std::vector<Document> doc = server.FindTopDocuments(raw_query, status);
-        requests_.push_back({ doc, raw_query });
+        requests_.push_back({ doc.size(), raw_query});
         DequeRequests();
         return doc;
     }
 
     std::vector<Document> AddFindRequest(const std::string& raw_query) {
         std::vector<Document> doc = server.FindTopDocuments(raw_query);
-        requests_.push_back({ doc, raw_query });
+        requests_.push_back({ doc.size(), raw_query });
         DequeRequests();
         return doc;
     }
@@ -44,7 +44,7 @@ public:
 
 private:
     struct QueryResult {
-        std::vector<Document> responce_;
+        size_t responce_;
         std::string request;
     };
     std::deque<QueryResult> requests_;
