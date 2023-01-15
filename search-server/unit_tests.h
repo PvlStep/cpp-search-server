@@ -5,6 +5,7 @@
 #include "request_queue.h"
 #include "search_server.h"
 #include "assert_for_server.h"
+#include "remove_duplicates.h"
 
 #include <algorithm>
 #include <cassert>
@@ -40,4 +41,8 @@ void TestCompRevelance();
 
 void TestCompRevelance();
 
+void TestRemoveDuplicates();
+
 void TestSearchServer();
+
+

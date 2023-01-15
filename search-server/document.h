@@ -9,8 +9,8 @@
 enum class DocumentStatus {
     ACTUAL = 0,
     IRRELEVANT = 1,
-    BANNED = 3,
-    REMOVED = 4,
+    BANNED = 2,
+    REMOVED = 3,
 };
 
 struct Document {
