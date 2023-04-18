@@ -78,7 +78,6 @@ private:
         std::map<std::string_view, double> freq;
     };
     std::deque<std::string> documents_storage;
-    //std::map<int, std::deque<std::string>> deque_of_words;
     const std::set<std::string, std::less<>> stop_words_;
     std::map<std::string_view, std::map<int, double>> word_to_document_freqs_;
     std::map<int, DocumentData> documents_;
@@ -91,17 +90,14 @@ private:
         bool is_stop;
     };
 
-    struct Query {
-        std::set<std::string> plus_words;
-        std::set<std::string> minus_words;
-    };
-
     struct QueryNew {
         std::vector<std::string_view> plus_words;
         std::vector<std::string_view> minus_words;
     };
 
     bool IsStopWord(const std::string_view word) const;
+
+    static bool IsValidWord(const std::string_view word);
 
     static bool IsValidWord(const std::string_view word);
 
