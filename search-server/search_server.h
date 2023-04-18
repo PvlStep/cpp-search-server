@@ -59,17 +59,15 @@ public:
 
     std::tuple<std::vector<std::string_view>, DocumentStatus> MatchDocument(const std::string_view raw_query,
         int document_id) const;
-    
-    std::tuple<std::vector<std::string_view>, DocumentStatus> MatchDocument(const std::execution::sequenced_policy& policy, 
-        const std::string_view raw_query, int document_id) const;
-    
-    //template <typename ExecutionPolicy>
-    std::tuple<std::vector<std::string_view>, DocumentStatus> MatchDocument(const std::execution::parallel_policy& policy, 
+
+    std::tuple<std::vector<std::string_view>, DocumentStatus> MatchDocument(const std::execution::sequenced_policy& policy,
         const std::string_view raw_query, int document_id) const;
 
+    //template <typename ExecutionPolicy>
+    std::tuple<std::vector<std::string_view>, DocumentStatus> MatchDocument(const std::execution::parallel_policy& policy,
+        const std::string_view raw_query, int document_id) const;
 
     const std::map<std::string_view, double>& GetWordFrequencies(int document_id) const;
-
 
 private:
     struct DocumentData {
@@ -99,21 +97,13 @@ private:
 
     static bool IsValidWord(const std::string_view word);
 
-    static bool IsValidWord(const std::string_view word);
-
     static bool IsInvalidQuery(const std::string& text);
-
-    //std::vector<std::string> SplitIntoWordsNoStop(const std::string& text) const;
 
     std::vector<std::string_view> SplitIntoWordsNoStop(const std::string& text) const;
 
     static int ComputeAverageRating(const std::vector<int>& ratings);
 
     QueryWord ParseQueryWord(std::string_view text) const;
-
-    /*
-    Query ParseQueryOld(const std::string& text) const;
-    */
 
     QueryNew ParseQuery(const std::string_view text) const;
 
@@ -122,8 +112,6 @@ private:
     template <typename DocumentPredicate>
     std::vector<Document> FindAllDocuments(const QueryNew& query,
         DocumentPredicate document_predicate) const;
-
-
 };
 
 void RemoveDuplicates(SearchServer& search_server);
@@ -159,11 +147,8 @@ std::vector<Document> SearchServer::FindTopDocuments(const std::string_view raw_
     if (matched_documents.size() > MAX_RESULT_DOCUMENT_COUNT) {
         matched_documents.resize(MAX_RESULT_DOCUMENT_COUNT);
     }
-
     return matched_documents;
 }
-
-
 
 template <typename DocumentPredicate>
 std::vector<Document> SearchServer::FindAllDocuments(const QueryNew& query,
