@@ -13,5 +13,3 @@ int ReadLineWithNumber() {
     ReadLine();
     return result;
 }
-
-
