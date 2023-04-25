@@ -13,6 +13,14 @@ SearchServer::SearchServer(const std::string_view stop_words_text)
 {
 }
 
+std::vector<Document> SearchServer::FindTopDocuments(const std::string_view raw_query, DocumentStatus status) const {
+    return FindTopDocuments(std::execution::seq, raw_query, status);
+}
+
+std::vector<Document> SearchServer::FindTopDocuments(const std::string_view raw_query) const {
+    return FindTopDocuments(std::execution::seq, raw_query);
+}
+
 void SearchServer::AddDocument(int document_id, const std::string_view document, DocumentStatus status,
     const std::vector<int>& ratings) {
     if ((document_id < 0) || (documents_.count(document_id) > 0)) {
@@ -32,16 +40,6 @@ void SearchServer::AddDocument(int document_id, const std::string_view document,
     document_ids_.insert(document_id);
 }
 
-std::vector<Document> SearchServer::FindTopDocuments(const std::string_view raw_query, DocumentStatus status) const {
-    return FindTopDocuments(
-        raw_query, [status](int document_id, DocumentStatus document_status, int rating) {
-            return document_status == status;
-        });
-}
-
-std::vector<Document> SearchServer::FindTopDocuments(const std::string_view raw_query) const {
-    return FindTopDocuments(raw_query, DocumentStatus::ACTUAL);
-}
 
 int SearchServer::GetDocumentCount() const {
     return static_cast<int>(documents_.size());

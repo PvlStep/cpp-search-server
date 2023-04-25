@@ -2,6 +2,7 @@
 #include <stack>
 #include <vector>
 #include <string>
+#include <execution>
 
 #include "document.h"
 #include "search_server.h"
@@ -24,14 +25,14 @@ public:
     }
 
     std::vector<Document> AddFindRequest(const std::string& raw_query, DocumentStatus status) {
-        std::vector<Document> doc = server.FindTopDocuments(raw_query, status);
+        std::vector<Document> doc = server.FindTopDocuments(std::execution::par, raw_query, status);
         requests_.push_back({ doc.size(), raw_query});
         DequeRequests();
         return doc;
     }
 
     std::vector<Document> AddFindRequest(const std::string& raw_query) {
-        std::vector<Document> doc = server.FindTopDocuments(raw_query);
+        std::vector<Document> doc = server.FindTopDocuments(std::execution::par, raw_query);
         requests_.push_back({ doc.size(), raw_query });
         DequeRequests();
         return doc;
